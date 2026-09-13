@@ -23,19 +23,8 @@ import {
 } from "@discordjs/voice";
 import { logger } from "../lib/logger";
 import { commands, getSubcommand } from "./commands";
-import { sendLog, getBotStatus } from "./logging";
-import { StateStore, type GuildState, type LogType } from "./state";
-
-const CATEGORY_NAME = "LOGBOT";
-const LOG_CHANNELS: Array<[LogType, string]> = [
-  ["member", "uye-log"],
-  ["message", "mesaj-log"],
-  ["role", "rol-log"],
-  ["channel", "kanal-log"],
-  ["voice", "ses-log"],
-  ["moderation", "moderasyon-log"],
-  ["server", "sunucu-log"],
-];
+import { getBotStatus } from "./logging";
+import { StateStore, type GuildState } from "./state";
 
 const client = new Client({
   intents: [
@@ -78,45 +67,26 @@ async function reply(
 
 async function ensureTextChannel(
   guild: NonNullable<ChatInputCommandInteraction["guild"]>,
-  categoryId: string,
   name: string,
 ): Promise<TextChannel> {
   const existing = guild.channels.cache.find(
     (channel) =>
       channel.type === ChannelType.GuildText &&
       channel.name === name &&
-      channel.parentId === categoryId,
+      !channel.parentId,
   );
   if (existing?.isTextBased()) return existing as TextChannel;
   return guild.channels.create({
     name,
     type: ChannelType.GuildText,
-    parent: categoryId,
   });
 }
 
 async function ensureSetup(
   guild: NonNullable<ChatInputCommandInteraction["guild"]>,
 ): Promise<GuildState> {
-  let category = guild.channels.cache.find(
-    (channel) => channel.type === ChannelType.GuildCategory && channel.name === CATEGORY_NAME,
-  );
-  if (!category || category.type !== ChannelType.GuildCategory) {
-    category = await guild.channels.create({
-      name: CATEGORY_NAME,
-      type: ChannelType.GuildCategory,
-    });
-  }
-
   const guildState = store.getGuild(guild.id);
-  for (const [type, name] of LOG_CHANNELS) {
-    const channel = await ensureTextChannel(guild, category.id, name);
-    guildState.logChannels[type] = channel.id;
-  }
-
-  const roleMenuChannel = await ensureTextChannel(guild, category.id, "rol-menusu");
-  const leaderboardChannel = await ensureTextChannel(guild, category.id, "leaderboard");
-  guildState.roleMenuChannelId = roleMenuChannel.id;
+  const leaderboardChannel = await ensureTextChannel(guild, "leaderboard");
   guildState.leaderboardChannelId = leaderboardChannel.id;
 
   let voiceCategory = guild.channels.cache.find(
@@ -149,24 +119,6 @@ async function ensureSetup(
   return guildState;
 }
 
-function roleMenuComponents(state: GuildState): ActionRowBuilder<StringSelectMenuBuilder>[] {
-  const entries = state.roleMenuEntries.slice(0, 25);
-  const menu = new StringSelectMenuBuilder()
-    .setCustomId("logbot:role-menu")
-    .setPlaceholder("Almak veya bırakmak istediğin rolü seç")
-    .setMinValues(1)
-    .setMaxValues(1)
-    .addOptions(
-      entries.map((entry) => ({
-        label: entry.label.slice(0, 100),
-        value: entry.roleId,
-        description: `${entry.category} kategorisi`,
-        emoji: entry.emoji,
-      })),
-    );
-  return [new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(menu)];
-}
-
 function leaderboardComponents(): ActionRowBuilder<StringSelectMenuBuilder>[] {
   const menu = new StringSelectMenuBuilder()
     .setCustomId("logbot:leaderboard")
@@ -177,25 +129,6 @@ function leaderboardComponents(): ActionRowBuilder<StringSelectMenuBuilder>[] {
       { label: "Ses sıralaması", value: "voice", description: "En uzun süre ses odasında kalanlar" },
     );
   return [new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(menu)];
-}
-
-async function postRoleMenu(
-  guild: NonNullable<ChatInputCommandInteraction["guild"]>,
-  state: GuildState,
-): Promise<void> {
-  if (!state.roleMenuChannelId) throw new Error("Rol menüsü kanalı bulunamadı.");
-  const channel = await guild.channels.fetch(state.roleMenuChannelId);
-  if (!channel?.isTextBased()) throw new Error("Rol menüsü kanalı kullanılamıyor.");
-  const content =
-    state.roleMenuEntries.length > 0
-      ? "Aşağıdaki menüden topluluk rollerini seçebilirsin. Aynı rolü tekrar seçersen rol kaldırılır."
-      : "Henüz menüye rol eklenmemiş. Yönetici `/roles add` ile rol ekleyebilir.";
-  const message = await (channel as TextChannel).send({
-    content,
-    components: state.roleMenuEntries.length > 0 ? roleMenuComponents(state) : [],
-  });
-  state.roleMenuMessageId = message.id;
-  store.save();
 }
 
 async function postLeaderboard(
@@ -269,7 +202,7 @@ async function handleSetup(interaction: ChatInputCommandInteraction): Promise<vo
   await ensureSetup(interaction.guild!);
   await reply(
     interaction,
-    'Kurulum tamamlandı. Log kanalları, rol menüsü, leaderboard ve "Oda Oluştur" ses kanalı hazır.',
+    'Kurulum tamamlandı. Leaderboard kanalı ve "Oda Oluştur" geçici ses sistemi hazır.',
   );
 }
 
@@ -288,35 +221,6 @@ async function handleAutorole(interaction: ChatInputCommandInteraction): Promise
   } else {
     const role = state.autoRoleId ? `<@&${state.autoRoleId}>` : "ayarlı değil";
     await reply(interaction, `Otomatik rol: ${role}`);
-  }
-}
-
-async function handleRoles(interaction: ChatInputCommandInteraction): Promise<void> {
-  const state = store.getGuild(interaction.guild!.id);
-  const subcommand = getSubcommand(interaction);
-  if (subcommand === "add") {
-    const role = interaction.options.getRole("role", true);
-    const category = interaction.options.getString("category", true);
-    const emoji = interaction.options.getString("emoji") ?? undefined;
-    state.roleMenuEntries = state.roleMenuEntries.filter((entry) => entry.roleId !== role.id);
-    state.roleMenuEntries.push({
-      roleId: role.id,
-      label: role.name,
-      description: `${category} rolü`,
-      emoji,
-      category,
-    });
-    store.save();
-    await reply(interaction, `${role} rolü menüye eklendi. Şimdi \`/roles menu\` çalıştır.`);
-  } else if (subcommand === "remove") {
-    const role = interaction.options.getRole("role", true);
-    const before = state.roleMenuEntries.length;
-    state.roleMenuEntries = state.roleMenuEntries.filter((entry) => entry.roleId !== role.id);
-    store.save();
-    await reply(interaction, before === state.roleMenuEntries.length ? "Bu rol menüde yoktu." : `${role} menüden çıkarıldı.`);
-  } else {
-    await postRoleMenu(interaction.guild!, state);
-    await reply(interaction, "Rol alma menüsü hazırlandı.");
   }
 }
 
@@ -372,7 +276,6 @@ async function handleModeration(interaction: ChatInputCommandInteraction): Promi
     const reason = interaction.options.getString("reason", true);
     store.addWarning(guild.id, user.id, interaction.user.id, reason);
     await reply(interaction, `${user} uyarıldı: ${reason}`);
-    await sendLog(guild, store, "moderation", "Kullanıcı uyarıldı", `${user} · ${reason}`);
   } else if (subcommand === "warnings" && user) {
     const warnings = store.getGuild(guild.id).warnings[user.id] ?? [];
     await reply(interaction, warnings.length === 0 ? `${user} için uyarı yok.` : warnings.map((warning, index) => `${index + 1}. ${warning.reason}`).join("\n"));
@@ -385,19 +288,16 @@ async function handleModeration(interaction: ChatInputCommandInteraction): Promi
     const reason = interaction.options.getString("reason", true);
     await member.timeout(minutes * 60_000, reason);
     await reply(interaction, `${user} ${minutes} dakika susturuldu.`);
-    await sendLog(guild, store, "moderation", "Timeout uygulandı", `${user} · ${minutes} dakika · ${reason}`);
   } else if (subcommand === "kick" && user) {
     const member = await guild.members.fetch(user.id);
     const reason = interaction.options.getString("reason", true);
     await member.kick(reason);
     await reply(interaction, `${user} sunucudan atıldı.`);
-    await sendLog(guild, store, "moderation", "Üye atıldı", `${user} · ${reason}`);
   } else if (subcommand === "ban" && user) {
     const member = await guild.members.fetch(user.id);
     const reason = interaction.options.getString("reason", true);
     await member.ban({ reason });
     await reply(interaction, `${user} sunucudan yasaklandı.`);
-    await sendLog(guild, store, "moderation", "Üye yasaklandı", `${user} · ${reason}`);
   } else if (subcommand === "purge") {
     const amount = interaction.options.getInteger("amount", true);
     if (!interaction.channel || !interaction.channel.isTextBased()) {
@@ -413,7 +313,6 @@ async function handleCommand(interaction: ChatInputCommandInteraction): Promise<
   try {
     if (interaction.commandName === "setup") await handleSetup(interaction);
     else if (interaction.commandName === "autorole") await handleAutorole(interaction);
-    else if (interaction.commandName === "roles") await handleRoles(interaction);
     else if (interaction.commandName === "leaderboard") await handleLeaderboard(interaction);
     else if (interaction.commandName === "voice") await handleVoice(interaction);
     else if (interaction.commandName === "mod") await handleModeration(interaction);
@@ -424,24 +323,7 @@ async function handleCommand(interaction: ChatInputCommandInteraction): Promise<
 }
 
 async function handleComponent(interaction: StringSelectMenuInteraction): Promise<void> {
-  if (interaction.customId === "logbot:role-menu") {
-    if (!interaction.guild || !interaction.member) return;
-    const roleId = interaction.values[0];
-    const role = interaction.guild.roles.cache.get(roleId);
-    if (!role) {
-      await interaction.reply({ content: "Bu rol artık mevcut değil.", ephemeral: true });
-      return;
-    }
-    const member = interaction.member as GuildMember;
-    if (member.roles.cache.has(role.id)) {
-      await member.roles.remove(role);
-      await interaction.reply({ content: `${role.name} rolü kaldırıldı.`, ephemeral: true });
-    } else {
-      await member.roles.add(role);
-      await interaction.reply({ content: `${role.name} rolü verildi.`, ephemeral: true });
-    }
-    await sendLog(interaction.guild, store, "role", "Rol menüsü kullanıldı", `${member.user} · ${role.name}`);
-  } else if (interaction.customId === "logbot:leaderboard") {
+  if (interaction.customId === "logbot:leaderboard") {
     await leaderboardResponse(interaction, interaction.values[0] as "messages" | "levels" | "voice");
   }
 }
@@ -456,7 +338,6 @@ async function createTempVoice(member: GuildMember): Promise<void> {
     permissionOverwrites: [{ id: member.id, allow: [PermissionFlagsBits.ManageChannels, PermissionFlagsBits.MoveMembers] }],
   });
   await member.voice.setChannel(channel);
-  await sendLog(member.guild, store, "voice", "Geçici ses odası açıldı", `${member.user} · ${channel.name}`);
 }
 
 function trackVoiceChange(oldState: { channelId: string | null; member: GuildMember | null }, newState: { channelId: string | null; member: GuildMember | null }): void {
@@ -491,21 +372,11 @@ client.on("guildMemberAdd", async (member) => {
     const role = member.guild.roles.cache.get(autoRoleId);
     if (role) await member.roles.add(role).catch((error) => logger.warn({ err: error }, "Could not assign autorole"));
   }
-  await sendLog(member.guild, store, "member", "Üye katıldı", `${member.user} sunucuya katıldı.`);
-});
-
-client.on("guildMemberRemove", async (member) => {
-  await sendLog(member.guild, store, "member", "Üye ayrıldı", `${member.user.tag} sunucudan ayrıldı.`);
 });
 
 client.on("messageCreate", async (message) => {
   if (!message.guild || message.author.bot) return;
   store.addMessage(message.guild.id, message.author.id);
-});
-
-client.on("messageDelete", async (message) => {
-  if (!message.guild || message.author?.bot) return;
-  await sendLog(message.guild, store, "message", "Mesaj silindi", `${message.author?.tag ?? "Bilinmeyen"} · ${message.content ?? "İçerik alınamadı"}`);
 });
 
 client.on("voiceStateUpdate", async (oldState, newState) => {
