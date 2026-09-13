@@ -4,6 +4,7 @@ import {
   Client,
   EmbedBuilder,
   GatewayIntentBits,
+  MessageFlags,
   PermissionFlagsBits,
   StringSelectMenuBuilder
 } from "discord.js";
@@ -38,14 +39,37 @@ function isModerator(interaction) {
 function isGuildInteraction(interaction) {
   return interaction.isChatInputCommand() && Boolean(interaction.guild);
 }
+function isClosedInteractionError(error) {
+  return error?.code === 10062 || error?.code === 40060 || error?.rawError?.code === 10062 || error?.rawError?.code === 40060;
+}
+async function acknowledgeInteraction(interaction) {
+  if (interaction.replied || interaction.deferred) return true;
+  try {
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+    return true;
+  } catch (error) {
+    if (!isClosedInteractionError(error)) throw error;
+    logger.warn({ err: error, interaction: interaction.id }, "Discord interaction expired before acknowledgement");
+    return false;
+  }
+}
 async function reply(interaction, content) {
-  const payload = typeof content === "string"
-    ? { content, ephemeral: true }
-    : { ...content, ephemeral: content.ephemeral ?? true };
-  if (interaction.replied || interaction.deferred) {
-    await interaction.followUp(payload);
-  } else {
-    await interaction.reply(payload);
+  const payload = typeof content === "string" ? { content } : { ...content };
+  if (payload.ephemeral) {
+    delete payload.ephemeral;
+    payload.flags ??= MessageFlags.Ephemeral;
+  } else if (payload.flags === void 0) {
+    payload.flags = MessageFlags.Ephemeral;
+  }
+  try {
+    if (interaction.replied || interaction.deferred) {
+      await interaction.followUp(payload);
+    } else {
+      await interaction.reply(payload);
+    }
+  } catch (error) {
+    if (!isClosedInteractionError(error)) throw error;
+    logger.warn({ err: error, interaction: interaction.id }, "Discord interaction closed before response");
   }
 }
 async function ensureTextChannel(guild, name) {
@@ -300,9 +324,7 @@ async function handleModeration(interaction) {
 }
 async function handleCommand(interaction) {
   try {
-    if (!interaction.deferred && !interaction.replied) {
-      await interaction.deferReply({ ephemeral: true });
-    }
+    if (!await acknowledgeInteraction(interaction)) return;
     if (interaction.commandName === "kurulum") await handleSetup(interaction);
     else if (interaction.commandName === "otomatik-rol") await handleAutorole(interaction);
     else if (interaction.commandName === "roller") await handleRoles(interaction);
@@ -317,9 +339,7 @@ async function handleCommand(interaction) {
 }
 async function handleComponent(interaction) {
   try {
-    if (!interaction.deferred && !interaction.replied) {
-      await interaction.deferReply({ ephemeral: true });
-    }
+    if (!await acknowledgeInteraction(interaction)) return;
     if (interaction.customId === "logbot:role-menu") {
       const role = interaction.guild?.roles.cache.get(interaction.values[0]);
       const member = interaction.member;
@@ -368,8 +388,12 @@ client.once("ready", async () => {
   );
 });
 client.on("interactionCreate", async (interaction) => {
-  if (isGuildInteraction(interaction)) await handleCommand(interaction);
-  else if (interaction.isStringSelectMenu()) await handleComponent(interaction);
+  try {
+    if (isGuildInteraction(interaction)) await handleCommand(interaction);
+    else if (interaction.isStringSelectMenu()) await handleComponent(interaction);
+  } catch (error) {
+    logger.error({ err: error, interaction: interaction.id }, "Discord interaction handler failed");
+  }
 });
 client.on("guildMemberAdd", async (member) => {
   const autoRoleId = store.getGuild(member.guild.id).autoRoleId;
