@@ -39,10 +39,13 @@ function isGuildInteraction(interaction) {
   return interaction.isChatInputCommand() && Boolean(interaction.guild);
 }
 async function reply(interaction, content) {
+  const payload = typeof content === "string"
+    ? { content, ephemeral: true }
+    : { ...content, ephemeral: content.ephemeral ?? true };
   if (interaction.replied || interaction.deferred) {
-    await interaction.followUp({ content, ephemeral: true });
+    await interaction.followUp(payload);
   } else {
-    await interaction.reply({ content, ephemeral: true });
+    await interaction.reply(payload);
   }
 }
 async function ensureTextChannel(guild, name) {
@@ -149,7 +152,7 @@ async function leaderboardResponse(interaction, type) {
       return `${index + 1}. ${user?.username ?? "Bilinmeyen \xFCye"} \u2014 ${value} ${labels[type]}`;
     })
   )).join("\n");
-  await interaction.reply({
+  await reply(interaction, {
     embeds: [
       new EmbedBuilder().setColor(5793266).setTitle(`Leaderboard \xB7 ${labels[type]}`).setDescription(description)
     ],
@@ -297,29 +300,41 @@ async function handleModeration(interaction) {
 }
 async function handleCommand(interaction) {
   try {
+    if (!interaction.deferred && !interaction.replied) {
+      await interaction.deferReply({ ephemeral: true });
+    }
     if (interaction.commandName === "kurulum") await handleSetup(interaction);
     else if (interaction.commandName === "otomatik-rol") await handleAutorole(interaction);
     else if (interaction.commandName === "roller") await handleRoles(interaction);
     else if (interaction.commandName === "siralama") await handleLeaderboard(interaction);
     else if (interaction.commandName === "ses") await handleVoice(interaction);
     else if (interaction.commandName === "moderasyon") await handleModeration(interaction);
+    else await reply(interaction, "Bu komut artık kullanılmıyor. Discord menüsündeki güncel Türkçe komutları kullan.");
   } catch (error) {
     logger.error({ err: error, command: interaction.commandName }, "Discord command failed");
     await reply(interaction, "Komut \xE7al\u0131\u015Ft\u0131r\u0131l\u0131rken bir hata olu\u015Ftu.");
   }
 }
 async function handleComponent(interaction) {
-  if (interaction.customId === "logbot:role-menu") {
-    const role = interaction.guild?.roles.cache.get(interaction.values[0]);
-    const member = interaction.member;
-    if (!role) {
-      await interaction.reply({ content: "Bu rol art\u0131k mevcut de\u011Fil.", ephemeral: true });
-      return;
+  try {
+    if (!interaction.deferred && !interaction.replied) {
+      await interaction.deferReply({ ephemeral: true });
     }
-    await member.roles.add(role);
-    await interaction.reply({ content: `${role.name} rol\xFC verildi.`, ephemeral: true });
-  } else if (interaction.customId === "logbot:leaderboard") {
-    await leaderboardResponse(interaction, interaction.values[0]);
+    if (interaction.customId === "logbot:role-menu") {
+      const role = interaction.guild?.roles.cache.get(interaction.values[0]);
+      const member = interaction.member;
+      if (!role) {
+        await reply(interaction, "Bu rol art\u0131k mevcut de\u011Fil.");
+        return;
+      }
+      await member.roles.add(role);
+      await reply(interaction, `${role.name} rol\xFC verildi.`);
+    } else if (interaction.customId === "logbot:leaderboard") {
+      await leaderboardResponse(interaction, interaction.values[0]);
+    }
+  } catch (error) {
+    logger.error({ err: error, component: interaction.customId }, "Discord component failed");
+    await reply(interaction, "I\u015Flem ger\xE7ekle\u015Ftirirken bir hata olu\u015Ftu.");
   }
 }
 async function createTempVoice(member) {
