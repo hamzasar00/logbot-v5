@@ -12,9 +12,19 @@ if errorlevel 1 (
 
 where pnpm >nul 2>nul
 if errorlevel 1 (
-  echo pnpm bulunamadi. Corepack etkinlestiriliyor...
-  corepack enable
-  corepack prepare pnpm@10.26.1 --activate
+  echo pnpm bulunamadi. npm ile kuruluyor...
+  where npm >nul 2>nul
+  if errorlevel 1 (
+    echo npm bulunamadi. Node.js kurulumu eksik olabilir.
+    pause
+    exit /b 1
+  )
+  call npm install --global pnpm@10.26.1
+  if errorlevel 1 (
+    echo pnpm kurulumu basarisiz oldu.
+    pause
+    exit /b 1
+  )
 )
 
 echo [Logbot V5] Bagimliliklar kuruluyor...
