@@ -1,6 +1,6 @@
 # Logbot V5
 
-Logbot V4 mantığından JavaScript/TypeScript ile uyarlanan topluluk botu.
+JavaScript ile yazılmış Discord topluluk botu.
 
 - Otomatik rol
 - V4 rol menüsü: bağımsız `rol-menusu`, etkinlik/renk/burç/oyun/takım/diğer kategorileri
@@ -10,8 +10,8 @@ Logbot V4 mantığından JavaScript/TypeScript ile uyarlanan topluluk botu.
 
 ## Kurulum
 
-1. Discord Developer Portal'da Server Members Intent ve Message Content Intent'i aç.
-2. Node.js 22+ kur ve `kurulum.bat` çalıştır.
+1. Node.js 22 veya daha yeni bir sürüm kur.
+2. `kurulum.bat` çalıştır.
 3. `.env` içine `DISCORD_TOKEN` ekle.
 4. `baslat.bat` çalıştır.
 
