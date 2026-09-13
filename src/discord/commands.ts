@@ -8,7 +8,7 @@ import {
 export const commands = [
   new SlashCommandBuilder()
     .setName("setup")
-    .setDescription("Log, rol menüsü, leaderboard ve ses odası altyapısını hazırlar.")
+    .setDescription("Leaderboard ve geçici ses odası altyapısını hazırlar.")
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild.toString()),
 
   new SlashCommandBuilder()
@@ -28,45 +28,6 @@ export const commands = [
     )
     .addSubcommand((subcommand) =>
       subcommand.setName("status").setDescription("Otomatik rol ayarını gösterir."),
-    ),
-
-  new SlashCommandBuilder()
-    .setName("roles")
-    .setDescription("Rol alma menüsünü yönetir.")
-    .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles.toString())
-    .addSubcommand((subcommand) =>
-      subcommand
-        .setName("add")
-        .setDescription("Bir rolü seçim menüsüne ekler.")
-        .addRoleOption((option) =>
-          option.setName("role").setDescription("Menüde görünecek rol").setRequired(true),
-        )
-        .addStringOption((option) =>
-          option
-            .setName("category")
-            .setDescription("Rol kategorisi")
-            .setRequired(true)
-            .addChoices(
-              { name: "Etkinlik", value: "event" },
-              { name: "Renk", value: "color" },
-              { name: "Oyun", value: "game" },
-              { name: "Diğer", value: "other" },
-            ),
-        )
-        .addStringOption((option) =>
-          option.setName("emoji").setDescription("İsteğe bağlı emoji").setRequired(false),
-        ),
-    )
-    .addSubcommand((subcommand) =>
-      subcommand
-        .setName("remove")
-        .setDescription("Bir rolü menüden çıkarır.")
-        .addRoleOption((option) =>
-          option.setName("role").setDescription("Menüden çıkarılacak rol").setRequired(true),
-        ),
-    )
-    .addSubcommand((subcommand) =>
-      subcommand.setName("menu").setDescription("Rol alma menüsünü gönderir veya yeniler."),
     ),
 
   new SlashCommandBuilder()
