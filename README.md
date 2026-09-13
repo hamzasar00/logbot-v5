@@ -4,9 +4,18 @@ JavaScript ile yazılmış Discord topluluk botu.
 
 - Otomatik rol
 - V4 rol menüsü: bağımsız `rol-menusu`, etkinlik/renk/burç/oyun/takım/diğer kategorileri
-- Leaderboard: mesaj, seviye ve ses süresi
+- Sıralama: mesaj, seviye ve ses süresi
 - Geçici/özel ses odaları ve botun ses kanalına katılması
-- Slash moderasyon: warn, warnings, clear-warnings, timeout, kick, ban, purge
+- Türkçe slash moderasyon komutları
+
+## Türkçe komutlar
+
+- `/kurulum`
+- `/otomatik-rol ayarla|kapat|durum`
+- `/roller ekle|cikar|menu`
+- `/siralama kur|goster`
+- `/ses kur|katil|ayril`
+- `/moderasyon uyar|uyarilar|uyarilari-temizle|sustur|at|yasakla|temizle`
 
 ## Kurulum
 
@@ -14,14 +23,5 @@ JavaScript ile yazılmış Discord topluluk botu.
 2. `kurulum.bat` çalıştır.
 3. `.env` içine `DISCORD_TOKEN` ekle.
 4. `baslat.bat` çalıştır.
-
-## Komutlar
-
-- `/setup`: rol menüsü, leaderboard ve geçici ses altyapısını hazırlar
-- `/roles add|remove|menu`: V4 rol menüsünü yönetir
-- `/autorole set|disable|status`
-- `/leaderboard setup|show`
-- `/voice setup|join|leave`
-- `/mod warn|warnings|clear-warnings|timeout|kick|ban|purge`
 
 State `data/bot-state.json` içinde tutulur.
