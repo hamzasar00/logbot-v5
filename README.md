@@ -1,25 +1,22 @@
-# Logbot V5
+# Logbot V5 Java
 
-Logbot V4 mantığından yalnızca şu özellikler uyarlanmıştır:
+V4 dalından şu özellikler Java/JDA ile uyarlanmıştır:
 
 - Otomatik rol
+- V4 rol menüsü: bağımsız `rol-menusu`, etkinlik/renk/burç/oyun/takım/diğer kategorileri
 - Leaderboard: mesaj, seviye ve ses süresi
-- Geçici/özel ses odaları ve botun ses kanalına katılması
-- Slash moderasyon komutları: warn, warnings, clear-warnings, timeout, kick, ban, purge
+- V4 tarzı `oda-menusu` ile özel/geçici ses odaları
+- Slash moderasyon: warn, warnings, clear-warnings, timeout, kick, ban, purge
 
 ## Kurulum
 
-1. Discord Developer Portal'da Server Members Intent ve Message Content Intent'i aç.
-2. Botu gerekli kanal, rol, moderasyon ve ses izinleriyle sunucuya ekle.
-3. Windows'ta kurulum.bat dosyasını çalıştır.
-4. .env içine DISCORD_TOKEN değerini ekle.
-5. baslat.bat dosyasını çalıştır.
+1. Java 19+ ve Maven kur.
+2. `kurulum.bat` çalıştır.
+3. `.env` dosyasına `DISCORD_TOKEN` ekle.
+4. `baslat.bat` çalıştır.
 
-## Komutlar
+## Discord izinleri
 
-- /setup: leaderboard kanalı ve geçici ses odası altyapısını hazırlar
-- /autorole set|disable|status
-- /leaderboard setup|show
-- /voice setup|join|leave
-- /mod warn|warnings|clear-warnings|timeout|kick|ban|purge
+Server Members Intent ve Message Content Intent'i aç. Bot için kanal görüntüleme, mesaj gönderme, rol yönetme, kanal yönetme, üyeleri taşıma, bağlanma, konuşma ve moderasyon izinleri gerekir.
 
+State `data/bot-state.json` içinde tutulur.
