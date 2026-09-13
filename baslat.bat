@@ -16,7 +16,7 @@ if errorlevel 1 (
 )
 
 echo [Logbot V5] Bot baslatiliyor...
-call pnpm --filter @workspace/api-server run dev
+call pnpm start
 set "EXIT_CODE=%ERRORLEVEL%"
 echo.
 echo [Logbot V5] Bot durdu. Cikis kodu: %EXIT_CODE%
