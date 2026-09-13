@@ -1,30 +1,25 @@
 # Logbot V5
 
-Discord toplulukları için V4 log altyapısından uyarlanan topluluk botu.
+Logbot V4 mantığından yalnızca şu özellikler uyarlanmıştır:
 
-## Dahil olanlar
-
-- /setup: log kanalları, rol menüsü, leaderboard ve geçici ses odası altyapısı
-- /autorole set|disable|status: yeni üyeye otomatik rol
-- /roles add|remove|menu: rol alma menüsü
-- /leaderboard setup|show: mesaj, seviye ve ses süresi sıralaması
-- /voice setup|join|leave: geçici ses odaları ve botun ses kanalına girmesi
-- /mod warn|warnings|clear-warnings|timeout|kick|ban|purge: moderasyon
-- Üye, mesaj, rol, ses ve moderasyon olayları için loglar
+- Otomatik rol
+- Leaderboard: mesaj, seviye ve ses süresi
+- Geçici/özel ses odaları ve botun ses kanalına katılması
+- Slash moderasyon komutları: warn, warnings, clear-warnings, timeout, kick, ban, purge
 
 ## Kurulum
 
-1. Discord Developer Portal'da bot oluştur.
-2. Server Members Intent ve Message Content Intent'i aç.
-3. Botu gerekli izinlerle sunucuya davet et: Manage Channels, Move Members, Manage Roles, Moderate Members, Send Messages, Embed Links.
-4. Windows'ta kurulum.bat dosyasını çalıştır.
-5. Oluşan .env dosyasına DISCORD_TOKEN değerini gir.
-6. baslat.bat dosyasını çalıştır.
+1. Discord Developer Portal'da Server Members Intent ve Message Content Intent'i aç.
+2. Botu gerekli kanal, rol, moderasyon ve ses izinleriyle sunucuya ekle.
+3. Windows'ta kurulum.bat dosyasını çalıştır.
+4. .env içine DISCORD_TOKEN değerini ekle.
+5. baslat.bat dosyasını çalıştır.
 
-## Rol hiyerarşisi
+## Komutlar
 
-Bot rolü, otomatik vereceği ve menüdeki rollerin üzerinde olmalıdır.
+- /setup: leaderboard kanalı ve geçici ses odası altyapısını hazırlar
+- /autorole set|disable|status
+- /leaderboard setup|show
+- /voice setup|join|leave
+- /mod warn|warnings|clear-warnings|timeout|kick|ban|purge
 
-## State
-
-Guild ayarları, uyarılar ve leaderboard istatistikleri data/bot-state.json içinde tutulur. Bu dosya Git'e gönderilmez.
