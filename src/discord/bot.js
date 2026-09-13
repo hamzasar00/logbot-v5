@@ -166,12 +166,12 @@ async function handleSetup(interaction) {
 async function handleAutorole(interaction) {
   const state = store.getGuild(interaction.guild.id);
   const subcommand = getSubcommand(interaction);
-  if (subcommand === "set") {
-    const role = interaction.options.getRole("role", true);
+  if (subcommand === "ayarla") {
+    const role = interaction.options.getRole("rol", true);
     state.autoRoleId = role.id;
     store.save();
     await reply(interaction, `Otomatik rol ${role} olarak ayarland\u0131.`);
-  } else if (subcommand === "disable") {
+  } else if (subcommand === "kapat") {
     delete state.autoRoleId;
     store.save();
     await reply(interaction, "Otomatik rol kapat\u0131ld\u0131.");
@@ -184,9 +184,9 @@ async function handleRoles(interaction) {
   const guild = interaction.guild;
   const state = store.getGuild(guild.id);
   const subcommand = getSubcommand(interaction);
-  if (subcommand === "add") {
-    const role = interaction.options.getRole("role", true);
-    const category = interaction.options.getString("category", true);
+  if (subcommand === "ekle") {
+    const role = interaction.options.getRole("rol", true);
+    const category = interaction.options.getString("kategori", true);
     const emoji = interaction.options.getString("emoji") ?? void 0;
     state.roleMenuEntries = state.roleMenuEntries.filter((entry) => entry.roleId !== role.id);
     state.roleMenuEntries.push({
@@ -200,8 +200,8 @@ async function handleRoles(interaction) {
     if (!state.roleMenuChannelId) await ensureSetup(guild);
     await postRoleMenu(guild, state);
     await reply(interaction, `${role} V4 rol men\xFCs\xFCne eklendi.`);
-  } else if (subcommand === "remove") {
-    const role = interaction.options.getRole("role", true);
+  } else if (subcommand === "cikar") {
+    const role = interaction.options.getRole("rol", true);
     state.roleMenuEntries = state.roleMenuEntries.filter((entry) => entry.roleId !== role.id);
     store.save();
     if (!state.roleMenuChannelId) await ensureSetup(guild);
@@ -215,7 +215,7 @@ async function handleRoles(interaction) {
 }
 async function handleLeaderboard(interaction) {
   const state = store.getGuild(interaction.guild.id);
-  if (getSubcommand(interaction) === "setup") {
+  if (getSubcommand(interaction) === "kur") {
     await postLeaderboard(interaction.guild, state);
     await reply(interaction, "Leaderboard men\xFCs\xFC haz\u0131rland\u0131.");
     return;
@@ -226,13 +226,13 @@ async function handleLeaderboard(interaction) {
 async function handleVoice(interaction) {
   const guild = interaction.guild;
   const subcommand = getSubcommand(interaction);
-  if (subcommand === "setup") {
+  if (subcommand === "kur") {
     await ensureSetup(guild);
     await reply(interaction, `Ge\xE7ici ses sistemi haz\u0131r. \xDCyeler <#${store.getGuild(guild.id).voiceHubId}> kanal\u0131na girince \xF6zel oda a\xE7\u0131l\u0131r.`);
     return;
   }
   const member = interaction.member;
-  if (subcommand === "join") {
+  if (subcommand === "katil") {
     const voiceChannel = member.voice.channel;
     if (!voiceChannel || !voiceChannel.isVoiceBased()) {
       await reply(interaction, "\xD6nce bir ses kanal\u0131na gir.");
@@ -258,35 +258,35 @@ async function handleModeration(interaction) {
   }
   const guild = interaction.guild;
   const subcommand = getSubcommand(interaction);
-  const user = interaction.options.getUser("user");
-  if (subcommand === "warn" && user) {
-    const reason = interaction.options.getString("reason", true);
+  const user = interaction.options.getUser("kullanici");
+  if (subcommand === "uyar" && user) {
+    const reason = interaction.options.getString("neden", true);
     store.addWarning(guild.id, user.id, interaction.user.id, reason);
     await reply(interaction, `${user} uyar\u0131ld\u0131: ${reason}`);
-  } else if (subcommand === "warnings" && user) {
+  } else if (subcommand === "uyarilar" && user) {
     const warnings = store.getGuild(guild.id).warnings[user.id] ?? [];
     await reply(interaction, warnings.length === 0 ? `${user} i\xE7in uyar\u0131 yok.` : warnings.map((warning, index) => `${index + 1}. ${warning.reason}`).join("\n"));
-  } else if (subcommand === "clear-warnings" && user) {
+  } else if (subcommand === "uyarilari-temizle" && user) {
     const count = store.clearWarnings(guild.id, user.id);
     await reply(interaction, `${user} i\xE7in ${count} uyar\u0131 silindi.`);
-  } else if (subcommand === "timeout" && user) {
+  } else if (subcommand === "sustur" && user) {
     const member = await guild.members.fetch(user.id);
-    const minutes = interaction.options.getInteger("minutes", true);
-    const reason = interaction.options.getString("reason", true);
+    const minutes = interaction.options.getInteger("dakika", true);
+    const reason = interaction.options.getString("neden", true);
     await member.timeout(minutes * 6e4, reason);
     await reply(interaction, `${user} ${minutes} dakika susturuldu.`);
-  } else if (subcommand === "kick" && user) {
+  } else if (subcommand === "at" && user) {
     const member = await guild.members.fetch(user.id);
-    const reason = interaction.options.getString("reason", true);
+    const reason = interaction.options.getString("neden", true);
     await member.kick(reason);
     await reply(interaction, `${user} sunucudan at\u0131ld\u0131.`);
-  } else if (subcommand === "ban" && user) {
+  } else if (subcommand === "yasakla" && user) {
     const member = await guild.members.fetch(user.id);
-    const reason = interaction.options.getString("reason", true);
+    const reason = interaction.options.getString("neden", true);
     await member.ban({ reason });
     await reply(interaction, `${user} sunucudan yasakland\u0131.`);
-  } else if (subcommand === "purge") {
-    const amount = interaction.options.getInteger("amount", true);
+  } else if (subcommand === "temizle") {
+    const amount = interaction.options.getInteger("miktar", true);
     if (!interaction.channel || !interaction.channel.isTextBased()) {
       await reply(interaction, "Bu komut sadece yaz\u0131 kanal\u0131nda kullan\u0131labilir.");
       return;
@@ -297,12 +297,12 @@ async function handleModeration(interaction) {
 }
 async function handleCommand(interaction) {
   try {
-    if (interaction.commandName === "setup") await handleSetup(interaction);
-    else if (interaction.commandName === "autorole") await handleAutorole(interaction);
-    else if (interaction.commandName === "roles") await handleRoles(interaction);
-    else if (interaction.commandName === "leaderboard") await handleLeaderboard(interaction);
-    else if (interaction.commandName === "voice") await handleVoice(interaction);
-    else if (interaction.commandName === "mod") await handleModeration(interaction);
+    if (interaction.commandName === "kurulum") await handleSetup(interaction);
+    else if (interaction.commandName === "otomatik-rol") await handleAutorole(interaction);
+    else if (interaction.commandName === "roller") await handleRoles(interaction);
+    else if (interaction.commandName === "siralama") await handleLeaderboard(interaction);
+    else if (interaction.commandName === "ses") await handleVoice(interaction);
+    else if (interaction.commandName === "moderasyon") await handleModeration(interaction);
   } catch (error) {
     logger.error({ err: error, command: interaction.commandName }, "Discord command failed");
     await reply(interaction, "Komut \xE7al\u0131\u015Ft\u0131r\u0131l\u0131rken bir hata olu\u015Ftu.");
